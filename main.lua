@@ -30,19 +30,25 @@ function createPaddles()
   player1 = Paddle:new("PLAYER", "LEFT");
   player2 = Paddle:new("IA", "RIGHT");
 end
-function reset()
+function start()
   state = 1 -- 1: en curso, 2: fin
+  love.graphics.setNewFont(12)
+  love.graphics.setColor(255,255,255)
   createBall()
   createPaddles()
+end
+function menu()
+  state = 0
+  option = 1
+  options = { "Start", "Exit" }
+  print(#options)
 end
 function love.load()
   scorelimit = 5
   window = {}
   window.width, window.height = love.graphics.getDimensions()
-  love.graphics.setNewFont(12)
-  love.graphics.setColor(255,255,255)
   love.graphics.setBackgroundColor(22,22,22)
-  reset()
+  menu()
 end
 function love.update(dt)
   if state == 1 then
@@ -71,7 +77,6 @@ function love.update(dt)
       else
         player1.score = player1.score + 1
       end
-      --TODO: check winlose (5 pnts)
       if (player1.score == scorelimit or player2.score == scorelimit) then
         state = 2
       else
@@ -89,12 +94,51 @@ function love.update(dt)
   end
 end
 function love.keypressed(key)
-  if key == "r" then
-    reset()
+  if state == 0 then
+    if key == "up" then
+      option = option - 1
+      if option < 1 then
+        option = #options
+      end
+    elseif key == "down" then
+      option = option + 1
+      if option > #options then
+        option = 1
+      end
+    elseif key == "return" then
+      if option == 1 then
+        start()
+      elseif option == 2 then
+        love.event.quit()
+      end
+    elseif key == "escape" then
+      love.event.quit()
+    end
+  elseif state == 1 then
+    if key == "escape" then
+      state = 0
+    end
+  elseif state == 2 then
+    if key == "return" then
+      start()
+    elseif key == "esc" then
+      state = 0
+    end
   end
 end
 function love.draw()
-  if state == 1 then
+  if state == 0 then
+    for key, val in pairs(options) do
+      if option == key then
+        love.graphics.setNewFont(20)
+        love.graphics.setColor(255,255,255)
+      else
+        love.graphics.setNewFont(12)
+        love.graphics.setColor(160,160,160)
+      end
+      love.graphics.print( val, 100, key * 50 )
+    end
+  elseif state == 1 then
     love.graphics.rectangle( "fill", ball.x, ball.y, ball.width, ball.height, ball.width / 2, ball.height / 2 )
     love.graphics.rectangle( "fill", player1.x, player1.y, player1.width, player1.height )
     love.graphics.rectangle( "fill", player2.x, player2.y, player2.width, player2.height )
