@@ -104,5 +104,14 @@ function love.draw()
   elseif state == 2 then
     love.graphics.printf( player1.score > player2.score and "PLAYER" or "COMPUTER" .. " WINS", window.width / 2, window.height / 2, 100, "center" )
     -- TODO: que funcione el centrado
+  elseif state == 3 then
+    love.graphics.printf( "PAUSED", window.width / 2, window.height / 2, 100, "center" )
+  end
+end
+function love.focus(f)
+  if (f and state == 3) then
+    state = 1
+  elseif (f == false and state == 1) then
+    state = 3
   end
 end
