@@ -11,9 +11,20 @@ function Paddle:new(type, position)
   return setmetatable(newObj, self)
 end
 local functions = require("functions")
+function checkCollision(x1,y1,w1,h1, x2,y2,w2,h2)
+  return x1 < x2+w2 and
+         x2 < x1+w1 and
+         y1 < y2+h2 and
+         y2 < y1+h1
+end
+function paddleCollision()
+  return checkCollision(player1.x, player1.y, player1.width, player1.height, ball.x, ball.y, ball.width, ball.height) or
+         checkCollision(player2.x, player2.y, player2.width, player2.height, ball.x, ball.y, ball.width, ball.height)
+end
 function createBall()
   local angle = functions.randomdouble(3 * math.pi / 4, 5 * math.pi / 4)
-  ball = { x = window.width / 2, y = window.height / 2, direction = { x = math.cos(angle) , y = math.sin(angle) }, speed = 100, acceleration = 10 }
+  ball = { height = 10, width = 10, direction = { x = math.cos(angle) , y = math.sin(angle) }, speed = 100, acceleration = 10 }
+  ball.x, ball.y = window.width / 2 - ball.width / 2, window.height / 2 - ball.height / 2
 end
 function createPaddles()
   player1 = Paddle:new("PLAYER", "LEFT");
@@ -34,35 +45,30 @@ end
 function love.update(dt)
   -- PLAYER
   if (love.keyboard.isDown("up")) then
-    targety = player1.y - player1.speed * dt;
-    if (targety < 0) then
-      targety = 0
-    end
-    player1.y = targety;
+    player1.y = math.max(player1.y - player1.speed * dt, 0);
   end
   if (love.keyboard.isDown("down")) then
-    targety = player1.y + player1.speed * dt;
-    if (targety > window.height - player1.height) then
-      targety = window.height - player1.height
-    end
-    player1.y = targety;
+    player1.y = math.min(player1.y + player1.speed * dt, window.height - player1.height);
   end
   -- IA: TODO
   -- BALL
-  -- TODO: COLLISION W PADDLE
+  -- REBOTE CON PALA
+  if (paddleCollision()) then
+    ball.direction.x = ball.direction.x * -1
+  end
+  -- REBOTE CON BOUNDS
   local nextx, nexty = ball.x + ball.direction.x * dt * ball.speed, ball.y + ball.direction.y * dt * ball.speed;
-  if (nextx < 0 or nextx > window.width) then
+  if (nextx < 0 or nextx > window.width - ball.width) then
     if (nextx < 0) then
       player2.score = player2.score + 1
     else
       player1.score = player1.score + 1
     end
     createBall()
-    --ball.direction.x = ball.direction.x * -1
   else
     ball.x = nextx;
   end
-  if (nexty < 0 or nexty > window.height) then
+  if (nexty < 0 or nexty > window.height - ball.height) then
     ball.direction.y = ball.direction.y * -1
   else
     ball.y = nexty;
@@ -75,10 +81,10 @@ function love.keypressed(key)
   end
 end
 function love.draw()
-  love.graphics.circle( "fill", ball.x, ball.y, 6 )
-  love.graphics.rectangle("fill", player1.x, player1.y, player1.width, player1.height )
-  love.graphics.rectangle("fill", player2.x, player2.y, player2.width, player2.height )
+  love.graphics.rectangle( "fill", ball.x, ball.y, ball.width, ball.height, ball.width / 2, ball.height / 2 )
+  love.graphics.rectangle( "fill", player1.x, player1.y, player1.width, player1.height )
+  love.graphics.rectangle( "fill", player2.x, player2.y, player2.width, player2.height )
   love.graphics.line( ball.x, ball.y, ball.x + ball.direction.x * 10000, ball.y + ball.direction.y * 10000 )
-  love.graphics.print(player1.score, window.width / 2 - 20, 10)
-  love.graphics.print(player2.score, window.width / 2 + 20, 10)
+  love.graphics.print( player1.score, window.width / 2 - 20, 10 )
+  love.graphics.print( player2.score, window.width / 2 + 20, 10 )
 end
