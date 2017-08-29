@@ -23,7 +23,7 @@ function paddleCollision()
 end
 function createBall()
   local angle = functions.randomdouble(3 * math.pi / 4, 5 * math.pi / 4)
-  ball = { height = 10, width = 10, direction = { x = math.cos(angle) , y = math.sin(angle) }, speed = 100, acceleration = 10 }
+  ball = { height = 10, width = 10, direction = { x = math.cos(angle), y = math.sin(angle) }, speed = 100, acceleration = 10 }
   ball.x, ball.y = window.width / 2 - ball.width / 2, window.height / 2 - ball.height / 2
 end
 function createPaddles()
@@ -31,10 +31,12 @@ function createPaddles()
   player2 = Paddle:new("IA", "RIGHT");
 end
 function reset()
+  state = 1 -- 1: en curso, 2: fin
   createBall()
   createPaddles()
 end
 function love.load()
+  scorelimit = 5
   window = {}
   window.width, window.height = love.graphics.getDimensions()
   love.graphics.setNewFont(12)
@@ -43,37 +45,48 @@ function love.load()
   reset()
 end
 function love.update(dt)
-  -- PLAYER
-  if (love.keyboard.isDown("up")) then
-    player1.y = math.max(player1.y - player1.speed * dt, 0);
-  end
-  if (love.keyboard.isDown("down")) then
-    player1.y = math.min(player1.y + player1.speed * dt, window.height - player1.height);
-  end
-  -- IA: TODO
-  -- BALL
-  -- REBOTE CON PALA
-  if (paddleCollision()) then
-    ball.direction.x = ball.direction.x * -1
-  end
-  -- REBOTE CON BOUNDS
-  local nextx, nexty = ball.x + ball.direction.x * dt * ball.speed, ball.y + ball.direction.y * dt * ball.speed;
-  if (nextx < 0 or nextx > window.width - ball.width) then
-    if (nextx < 0) then
-      player2.score = player2.score + 1
-    else
-      player1.score = player1.score + 1
+  if state == 1 then
+    -- PLAYER
+    local move = 0
+    if (love.keyboard.isDown("up")) then
+      move = -1
+    elseif (love.keyboard.isDown("down")) then
+      move = 1
     end
-    createBall()
-  else
-    ball.x = nextx;
+    if (move ~= 0) then
+      player1.y = math.min(math.max(player1.y + player1.speed * dt * move, 0), window.height - player1.height)
+    end
+    -- IA, decide si va hacia arriba o hacia abajo y se mueve (se puede hacer mejor)
+    player2.y = math.min(math.max(player2.y + (player2.speed * dt * (player2.y < ball.y and 1 or -1)), 0), window.height - player2.height)
+    -- BALL
+    -- REBOTE CON PALA
+    if (paddleCollision()) then
+      ball.direction.x = ball.direction.x * -1
+    end
+    -- REBOTE CON BOUNDS
+    local nextx, nexty = ball.x + ball.direction.x * dt * ball.speed, ball.y + ball.direction.y * dt * ball.speed
+    if (nextx < 0 or nextx > window.width - ball.width) then
+      if (nextx < 0) then
+        player2.score = player2.score + 1
+      else
+        player1.score = player1.score + 1
+      end
+      --TODO: check winlose (5 pnts)
+      if (player1.score == scorelimit or player2.score == scorelimit) then
+        state = 2
+      else
+        createBall()
+      end
+    else
+      ball.x = nextx;
+    end
+    if (nexty < 0 or nexty > window.height - ball.height) then
+      ball.direction.y = ball.direction.y * -1
+    else
+      ball.y = nexty;
+    end
+    ball.speed = ball.speed + ball.acceleration * dt;
   end
-  if (nexty < 0 or nexty > window.height - ball.height) then
-    ball.direction.y = ball.direction.y * -1
-  else
-    ball.y = nexty;
-  end
-  ball.speed = ball.speed + ball.acceleration * dt;
 end
 function love.keypressed(key)
   if key == "r" then
@@ -81,10 +94,15 @@ function love.keypressed(key)
   end
 end
 function love.draw()
-  love.graphics.rectangle( "fill", ball.x, ball.y, ball.width, ball.height, ball.width / 2, ball.height / 2 )
-  love.graphics.rectangle( "fill", player1.x, player1.y, player1.width, player1.height )
-  love.graphics.rectangle( "fill", player2.x, player2.y, player2.width, player2.height )
-  love.graphics.line( ball.x, ball.y, ball.x + ball.direction.x * 10000, ball.y + ball.direction.y * 10000 )
-  love.graphics.print( player1.score, window.width / 2 - 20, 10 )
-  love.graphics.print( player2.score, window.width / 2 + 20, 10 )
+  if state == 1 then
+    love.graphics.rectangle( "fill", ball.x, ball.y, ball.width, ball.height, ball.width / 2, ball.height / 2 )
+    love.graphics.rectangle( "fill", player1.x, player1.y, player1.width, player1.height )
+    love.graphics.rectangle( "fill", player2.x, player2.y, player2.width, player2.height )
+    --love.graphics.line( ball.x, ball.y, ball.x + ball.direction.x * 10000, ball.y + ball.direction.y * 10000 )
+    love.graphics.print( player1.score, window.width / 2 - 20, 10 )
+    love.graphics.print( player2.score, window.width / 2 + 20, 10 )
+  elseif state == 2 then
+    love.graphics.printf( player1.score > player2.score and "PLAYER" or "COMPUTER" .. " WINS", window.width / 2, window.height / 2, 100, "center" )
+    -- TODO: que funcione el centrado
+  end
 end
